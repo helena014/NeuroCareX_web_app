@@ -15,21 +15,41 @@ const MriDetectionPage = () => {
         }
     };
 
+    // CONNECTED TO FASTAPI BACKEND
     const handleRunDetection = async () => {
         if (!selectedImage) return;
 
         setIsLoading(true);
         setDetectionResult(null);
 
+        const formData = new FormData();
+        formData.append('file', selectedImage);
+
         try {
-            await new Promise(resolve => setTimeout(resolve, 2500));
+            const response = await fetch('http://localhost:8000/api/predict', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Detection API failed');
+            }
+
+            const data = await response.json();
+
+            // Set state from actual PyTorch model predictions
             setDetectionResult({
                 status: 'success',
-                label: 'Very Mild Demented',
-                confidence: 0.942
+                label: data.prediction,
+                confidence: data.confidence, // Expects percentage e.g., 98.5
+                breakdown: data.breakdown || []
             });
         } catch (error) {
-            setDetectionResult({ status: 'error', message: 'Detection failed.' });
+            console.error('Detection error:', error);
+            setDetectionResult({ 
+                status: 'error', 
+                message: 'Failed to communicate with AI Backend. Ensure FastAPI is running.' 
+            });
         } finally {
             setIsLoading(false);
         }
@@ -107,6 +127,15 @@ const MriDetectionPage = () => {
                             </div>
                         )}
 
+                        {/* ERROR DISPLAY */}
+                        {!isLoading && detectionResult && detectionResult.status === 'error' && (
+                            <div className="bg-red-900/40 border border-red-700 p-4 rounded-xl text-red-200 text-sm">
+                                <p className="font-semibold mb-1">⚠️ Error</p>
+                                {detectionResult.message}
+                            </div>
+                        )}
+
+                        {/* SUCCESS RESULT DISPLAY */}
                         {!isLoading && detectionResult && detectionResult.status === 'success' && (
                             <div className="space-y-6">
                                 <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700">
@@ -117,15 +146,36 @@ const MriDetectionPage = () => {
                                 <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700">
                                     <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Model Confidence</p>
                                     <p className="text-4xl font-extrabold text-white mt-1">
-                                        {(detectionResult.confidence * 100).toFixed(1)}%
+                                        {detectionResult.confidence}%
                                     </p>
                                     <div className="w-full bg-slate-700 h-2 rounded-full mt-3 overflow-hidden">
                                         <div
-                                            className="bg-orange-500 h-full rounded-full"
-                                            style={{ width: `${detectionResult.confidence * 100}%` }}
+                                            className="bg-orange-500 h-full rounded-full transition-all duration-500"
+                                            style={{ width: `${detectionResult.confidence}%` }}
                                         ></div>
                                     </div>
                                 </div>
+
+                                {/* CLASS BREAKDOWN LIST */}
+                                {detectionResult.breakdown && detectionResult.breakdown.length > 0 && (
+                                    <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-3">
+                                        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Class Probabilities</p>
+                                        {detectionResult.breakdown.map((item) => (
+                                            <div key={item.label} className="text-xs space-y-1">
+                                                <div className="flex justify-between text-slate-300">
+                                                    <span>{item.label}</span>
+                                                    <span className="font-mono">{item.score}%</span>
+                                                </div>
+                                                <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="bg-slate-400 h-full rounded-full"
+                                                        style={{ width: `${item.score}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
