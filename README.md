@@ -1,0 +1,1 @@
+# NeuroCareX Web App - Alzheimer's Support Platform
