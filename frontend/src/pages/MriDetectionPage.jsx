@@ -1,5 +1,49 @@
 import React, { useState } from 'react';
 
+// Knowledge base for stage descriptions and recommended actions
+const STAGE_DETAILS = {
+    'NonDemented': {
+        title: 'Non-Demented (Normal Cognitive Status)',
+        description: 'No significant signs of neurodegeneration or structural brain atrophy associated with Alzheimer\'s disease were detected in this MRI scan.',
+        recommendations: [
+            'Maintain a healthy lifestyle with regular cardiovascular exercise.',
+            'Keep active with cognitive exercises, reading, and social interaction.',
+            'Schedule routine wellness check-ups with your healthcare provider.'
+        ],
+        badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+    },
+    'VeryMildDemented': {
+        title: 'Very Mild Demented (Minimal Cognitive Changes)',
+        description: 'Minor structural variations detected. This stage often corresponds to very early memory lapses that may be subtle or typical of normal age-related changes.',
+        recommendations: [
+            'Consult a neurologist for a detailed baseline cognitive assessment.',
+            'Track any subtle memory or daily task difficulties over time.',
+            'Focus on brain-healthy nutrition (e.g., Mediterranean diet) and adequate sleep.'
+        ],
+        badgeColor: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+    },
+    'MildDemented': {
+        title: 'Mild Demented (Early Stage Alzheimer\'s)',
+        description: 'Noticeable structural patterns associated with mild Alzheimer\'s disease. Individuals may experience mild confusion, memory loss, and difficulty managing complex tasks.',
+        recommendations: [
+            'Schedule a comprehensive neurological and clinical evaluation.',
+            'Discuss early intervention strategies and potential medications with a specialist.',
+            'Establish memory tools (calendars, reminders) and supportive daily routines.'
+        ],
+        badgeColor: 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+    },
+    'ModerateDemented': {
+        title: 'Moderate Demented (Moderate Stage Alzheimer\'s)',
+        description: 'Clear structural markers of neurodegeneration present. Characterized by increased memory loss, language challenges, and requiring assistance with routine daily activities.',
+        recommendations: [
+            'Seek specialized care from a neurologist or memory care team immediately.',
+            'Ensure a safe home environment to prevent confusion or wandering.',
+            'Evaluate caregiver support systems and long-term care plans.'
+        ],
+        badgeColor: 'bg-red-500/20 text-red-400 border-red-500/30'
+    }
+};
+
 const MriDetectionPage = () => {
     const [selectedImage, setSelectedImage] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -15,7 +59,6 @@ const MriDetectionPage = () => {
         }
     };
 
-    // CONNECTED TO FASTAPI BACKEND
     const handleRunDetection = async () => {
         if (!selectedImage) return;
 
@@ -37,11 +80,10 @@ const MriDetectionPage = () => {
 
             const data = await response.json();
 
-            // Set state from actual PyTorch model predictions
             setDetectionResult({
                 status: 'success',
                 label: data.prediction,
-                confidence: data.confidence, // Expects percentage e.g., 98.5
+                confidence: data.confidence,
                 breakdown: data.breakdown || []
             });
         } catch (error) {
@@ -55,8 +97,12 @@ const MriDetectionPage = () => {
         }
     };
 
+    const currentStageInfo = detectionResult?.status === 'success' 
+        ? STAGE_DETAILS[detectionResult.label] 
+        : null;
+
     return (
-        <div className="space-y-8 max-w-7xl mx-auto">
+        <div className="space-y-8 max-w-7xl mx-auto pb-12">
             <div>
                 <h3 className="text-2xl font-bold text-slate-900">Alzheimer's Disease MRI Scan Detection</h3>
                 <p className="text-sm text-slate-500 mt-1">
@@ -127,7 +173,6 @@ const MriDetectionPage = () => {
                             </div>
                         )}
 
-                        {/* ERROR DISPLAY */}
                         {!isLoading && detectionResult && detectionResult.status === 'error' && (
                             <div className="bg-red-900/40 border border-red-700 p-4 rounded-xl text-red-200 text-sm">
                                 <p className="font-semibold mb-1">⚠️ Error</p>
@@ -135,7 +180,6 @@ const MriDetectionPage = () => {
                             </div>
                         )}
 
-                        {/* SUCCESS RESULT DISPLAY */}
                         {!isLoading && detectionResult && detectionResult.status === 'success' && (
                             <div className="space-y-6">
                                 <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700">
@@ -156,7 +200,6 @@ const MriDetectionPage = () => {
                                     </div>
                                 </div>
 
-                                {/* CLASS BREAKDOWN LIST */}
                                 {detectionResult.breakdown && detectionResult.breakdown.length > 0 && (
                                     <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-3">
                                         <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Class Probabilities</p>
@@ -185,6 +228,43 @@ const MriDetectionPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* NEW: DETAILED EXPLANATION CARD (APPEARS BELOW AFTER ANALYSIS) */}
+            {!isLoading && currentStageInfo && (
+                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-md space-y-6">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div>
+                            <h4 className="text-xl font-bold text-slate-800">{currentStageInfo.title}</h4>
+                            <p className="text-xs text-slate-400 mt-0.5">Clinical Classification Breakdown & Next Steps</p>
+                        </div>
+                        <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${currentStageInfo.badgeColor}`}>
+                            {detectionResult.label}
+                        </span>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <h5 className="text-sm font-semibold text-slate-700 mb-1">What does this mean?</h5>
+                            <p className="text-slate-600 text-sm leading-relaxed">
+                                {currentStageInfo.description}
+                            </p>
+                        </div>
+
+                        <div>
+                            <h5 className="text-sm font-semibold text-slate-700 mb-2">Recommended Next Steps:</h5>
+                            <ul className="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                {currentStageInfo.recommendations.map((step, index) => (
+                                    <li key={index}>{step}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-800">
+                        <strong>Medical Disclaimer:</strong> This AI prediction is intended for educational and decision-support purposes only. It should not replace a formal medical diagnosis by a qualified healthcare professional or certified radiologist.
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
