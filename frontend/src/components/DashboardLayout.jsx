@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import MriDetectionPage from '../pages/MriDetectionPage';
+import ClinicalRiskPage from '../pages/ClinicalRiskPage';
 
 const DashboardLayout = () => {
     const [activeFeature, setActiveFeature] = useState('MRI Scan Detection');
 
     const featureLinks = [
         { name: 'Dashboard', icon: '📊' },
+        { name: 'Clinical Risk Assessment', icon: '📋' },
         { name: 'MRI Scan Detection', icon: '🧠' },
         { name: 'Reminder', icon: '⏰' },
         { name: 'Face Recognition', icon: '👤' },
@@ -20,6 +22,8 @@ const DashboardLayout = () => {
         switch (activeFeature) {
             case 'MRI Scan Detection':
                 return <MriDetectionPage />;
+            case 'Clinical Risk Assessment':
+                return <ClinicalRiskPage />;
             default:
                 return (
                     <div className="text-gray-500 p-8 text-lg">
@@ -38,7 +42,7 @@ const DashboardLayout = () => {
                     <p className="text-xs text-slate-400 mt-1">Alzheimer's Support System</p>
                 </div>
 
-                <nav className="flex-grow space-y-1 overflow-y-auto">
+                <nav className="flex-grow space-y-1 overflow-y-auto no-scrollbar">
                     {featureLinks.map((feature) => (
                         <button
                             key={feature.name}

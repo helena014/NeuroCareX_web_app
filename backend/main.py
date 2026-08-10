@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from services.mri_service import predict_alzheimer_mri
+from services.risk_service import predict_clinical_risk
 
 app = FastAPI(title="NeuroCareX AI Backend")
 
@@ -26,3 +27,10 @@ async def predict_mri(file: UploadFile = File(...)):
         return await predict_alzheimer_mri(file)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+
+@app.post("/api/predict-risk")
+async def predict_risk(data: dict):
+    try:
+        return predict_clinical_risk(data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Risk prediction error: {str(e)}")
