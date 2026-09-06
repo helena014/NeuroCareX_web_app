@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import MriDetectionPage from '../pages/MriDetectionPage';
 import ClinicalRiskPage from '../pages/ClinicalRiskPage';
+import SpeechDetectionPage from '../pages/SpeechDetectionPage';
 
 const DashboardLayout = () => {
     const [activeFeature, setActiveFeature] = useState('MRI Scan Detection');
@@ -24,6 +25,8 @@ const DashboardLayout = () => {
                 return <MriDetectionPage />;
             case 'Clinical Risk Assessment':
                 return <ClinicalRiskPage />;
+            case 'Speech Detection': 
+                return <SpeechDetectionPage />;
             default:
                 return (
                     <div className="text-gray-500 p-8 text-lg">

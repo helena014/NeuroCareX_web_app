@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from services.mri_service import predict_alzheimer_mri
 from services.risk_service import predict_clinical_risk
+from services.speech_service import predict_speech_biomarker
 
 app = FastAPI(title="NeuroCareX AI Backend")
 
@@ -34,3 +35,19 @@ async def predict_risk(data: dict):
         return predict_clinical_risk(data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Risk prediction error: {str(e)}")
+
+@app.post("/api/predict-speech")
+async def predict_speech(file: UploadFile = File(...)):
+    # Validate supported audio formats
+    valid_extensions = ('.wav', '.mp3', '.m4a', '.ogg', '.webm')
+    if not file.filename.lower().endswith(valid_extensions):
+        raise HTTPException(
+            status_code=400, 
+            detail="Unsupported audio file format. Please upload .wav, .mp3, or .m4a files."
+        )
+    
+    try:
+        audio_bytes = await file.read()
+        return predict_speech_biomarker(audio_bytes, file.filename)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Speech analysis error: {str(e)}")
