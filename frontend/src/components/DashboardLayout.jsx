@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import MriDetectionPage from '../pages/MriDetectionPage';
 import ClinicalRiskPage from '../pages/ClinicalRiskPage';
 import SpeechDetectionPage from '../pages/SpeechDetectionPage';
+import EmotionDetectionPage from '../pages/EmotionDetectionPage'; 
 
 const DashboardLayout = () => {
     const [activeFeature, setActiveFeature] = useState('MRI Scan Detection');
@@ -10,10 +11,11 @@ const DashboardLayout = () => {
         { name: 'Dashboard', icon: '📊' },
         { name: 'Clinical Risk Assessment', icon: '📋' },
         { name: 'MRI Scan Detection', icon: '🧠' },
+        { name: 'Speech Detection', icon: '🗣️' },
+        { name: 'Patient Emotion', icon: '🎭' }, 
         { name: 'Reminder', icon: '⏰' },
         { name: 'Face Recognition', icon: '👤' },
         { name: 'Location Tracking', icon: '📍' },
-        { name: 'Speech Detection', icon: '🗣️' },
         { name: 'Doctor Appointment Booking', icon: '📅' },
         { name: 'Memory Games', icon: '🎮' },
         { name: 'Chatbot', icon: '💬' }
@@ -27,6 +29,8 @@ const DashboardLayout = () => {
                 return <ClinicalRiskPage />;
             case 'Speech Detection': 
                 return <SpeechDetectionPage />;
+            case 'Patient Emotion': // <-- 3. ADDED CASE
+                return <EmotionDetectionPage />;
             default:
                 return (
                     <div className="text-gray-500 p-8 text-lg">
