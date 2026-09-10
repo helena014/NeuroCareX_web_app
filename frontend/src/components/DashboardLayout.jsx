@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import DashboardOverviewPage from '../pages/DashboardOverviewPage';
 import MriDetectionPage from '../pages/MriDetectionPage';
 import ClinicalRiskPage from '../pages/ClinicalRiskPage';
 import SpeechDetectionPage from '../pages/SpeechDetectionPage';
 import EmotionDetectionPage from '../pages/EmotionDetectionPage'; 
+import DoctorBookingPage from '../pages/DoctorBookingPage';
 
 const DashboardLayout = () => {
-    const [activeFeature, setActiveFeature] = useState('MRI Scan Detection');
+    const [activeFeature, setActiveFeature] = useState('Dashboard');
 
     const featureLinks = [
         { name: 'Dashboard', icon: '📊' },
@@ -22,23 +24,27 @@ const DashboardLayout = () => {
     ];
 
     const renderContent = () => {
-        switch (activeFeature) {
-            case 'MRI Scan Detection':
-                return <MriDetectionPage />;
-            case 'Clinical Risk Assessment':
-                return <ClinicalRiskPage />;
-            case 'Speech Detection': 
-                return <SpeechDetectionPage />;
-            case 'Patient Emotion': // <-- 3. ADDED CASE
-                return <EmotionDetectionPage />;
-            default:
-                return (
-                    <div className="text-gray-500 p-8 text-lg">
-                        Feature <strong>{activeFeature}</strong> is under development.
-                    </div>
-                );
-        }
-    };
+    switch (activeFeature) {
+        case 'Dashboard':
+            return <DashboardOverviewPage setActiveFeature={setActiveFeature} />;
+        case 'MRI Scan Detection':
+            return <MriDetectionPage />;
+        case 'Clinical Risk Assessment':
+            return <ClinicalRiskPage />;
+        case 'Speech Detection': 
+            return <SpeechDetectionPage />;
+        case 'Patient Emotion':
+            return <EmotionDetectionPage />;
+        case 'Doctor Appointment Booking': // Added for PostgreSQL Doctor Booking
+            return <DoctorBookingPage />;
+        default:
+            return (
+                <div className="text-gray-500 p-8 text-lg">
+                    Feature <strong>{activeFeature}</strong> is under development.
+                </div>
+            );
+    }
+};
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
@@ -72,7 +78,7 @@ const DashboardLayout = () => {
                     </div>
                     <div>
                         <p className="font-semibold text-slate-200">Final Year Project</p>
-                        <p className="text-slate-500">NeuroCareX Team</p>
+                        <p className="text-slate-500">NeuroCareX </p>
                     </div>
                 </div>
             </aside>
