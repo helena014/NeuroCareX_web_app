@@ -44,7 +44,7 @@ const STAGE_DETAILS = {
     }
 };
 
-const MriDetectionPage = () => {
+const MriDetectionPage = ({ user }) => {
     const [selectedImage, setSelectedImage] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [detectionResult, setDetectionResult] = useState(null);
@@ -59,14 +59,37 @@ const MriDetectionPage = () => {
         }
     };
 
+    const getLoggedInUserEmail = () => {
+        if (user && user.email) return user.email;
+
+        try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                const parsed = JSON.parse(storedUser);
+                if (parsed && parsed.email) return parsed.email;
+            }
+        } catch (e) {
+            console.error('Error parsing user from localStorage:', e);
+        }
+
+        const directEmail = localStorage.getItem('userEmail') || localStorage.getItem('email');
+        if (directEmail) return directEmail;
+
+        return 'guest@neurocarex.com';
+    };
+
     const handleRunDetection = async () => {
         if (!selectedImage) return;
 
         setIsLoading(true);
         setDetectionResult(null);
 
+        // Get logged in user email
+        const userEmail = getLoggedInUserEmail();
+
         const formData = new FormData();
         formData.append('file', selectedImage);
+        formData.append('patient_email', userEmail);
 
         try {
             const response = await fetch('http://localhost:8000/api/predict', {
@@ -229,7 +252,7 @@ const MriDetectionPage = () => {
                 </div>
             </div>
 
-            {/* NEW: DETAILED EXPLANATION CARD (APPEARS BELOW AFTER ANALYSIS) */}
+            {/* DETAILED EXPLANATION CARD */}
             {!isLoading && currentStageInfo && (
                 <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-md space-y-6">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4">

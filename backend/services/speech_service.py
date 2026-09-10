@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import warnings
@@ -7,6 +8,8 @@ import pandas as pd
 import librosa
 import audioread
 import traceback
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 # Suppress librosa user warnings for clean logs
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -147,9 +150,46 @@ def extract_acoustic_features(audio_bytes: bytes, filename: str) -> tuple[pd.Dat
             os.remove(tmp_file_path)
 
 
-def predict_speech_biomarker(audio_bytes: bytes, filename: str) -> dict:
+def save_speech_diagnostic(
+    db: Session,
+    patient_email: str,
+    speech_result: str,
+    speech_confidence: float,
+    speech_metrics: list
+):
+    """Inserts a new Speech diagnostic record into PostgreSQL with explicit SQL type casts."""
+    query = text("""
+        INSERT INTO speech_diagnostic_history 
+        (patient_email, speech_result, speech_confidence, speech_metrics)
+        VALUES (
+            :email, 
+            :result, 
+            CAST(:confidence AS NUMERIC(5, 2)), 
+            CAST(:metrics AS JSON)
+        )
+        RETURNING id;
+    """)
+    
+    result = db.execute(query, {
+        "email": patient_email or "guest@neurocarex.com",
+        "result": speech_result,
+        "confidence": float(speech_confidence),
+        "metrics": json.dumps(speech_metrics)
+    })
+    
+    inserted_id = result.fetchone()[0]
+    db.commit()
+    return inserted_id
+
+
+def predict_speech_biomarker(
+    audio_bytes: bytes, 
+    filename: str, 
+    db: Session = None, 
+    patient_email: str = "guest@neurocarex.com"
+) -> dict:
     """
-    Extracts features, scales inputs, predicts probability via RandomForest, and maps output.
+    Extracts features, scales inputs, predicts probability via RandomForest, and logs result to DB.
     Prints full exception trace to terminal if an error occurs.
     """
     try:
@@ -182,11 +222,28 @@ def predict_speech_biomarker(audio_bytes: bytes, filename: str) -> dict:
         
         predicted_label = "Impaired" if impaired_prob >= 50.0 else "Healthy Control"
 
+        # Insert into PostgreSQL safely
+        record_id = None
+        if db is not None:
+            try:
+                record_id = save_speech_diagnostic(
+                    db=db,
+                    patient_email=patient_email,
+                    speech_result=predicted_label,
+                    speech_confidence=impaired_prob,
+                    speech_metrics=metrics_summary
+                )
+                print(f"✅ Speech DB Insert Successful! Created Record ID: {record_id}")
+            except Exception as e:
+                db.rollback()
+                print(f"❌ Database Error during Speech save: {str(e)}")
+
         return {
             "status": "success",
             "predicted_label": predicted_label,
             "impaired_probability": impaired_prob,
-            "metrics_summary": metrics_summary
+            "metrics_summary": metrics_summary,
+            "db_record_id": record_id
         }
     except Exception as e:
         print("\n" + "="*50)

@@ -29,15 +29,15 @@ const DashboardLayout = ({ user, onLogout }) => {
             case 'Dashboard':
                 return <DashboardOverviewPage setActiveFeature={setActiveFeature} />;
             case 'MRI Scan Detection':
-                return <MriDetectionPage />;
+                return <MriDetectionPage user={user} />;
             case 'Clinical Risk Assessment':
                 return <ClinicalRiskPage />;
             case 'Speech Detection': 
-                return <SpeechDetectionPage />;
+                return <SpeechDetectionPage user={user} />;
             case 'Patient Emotion':
                 return <EmotionDetectionPage />;
             case 'Doctor Appointment Booking':
-                return <DoctorBookingPage />;
+                return <DoctorBookingPage user={user} />;
             default:
                 return (
                     <div className="text-gray-500 p-8 text-lg">

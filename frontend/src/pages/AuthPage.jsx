@@ -42,6 +42,9 @@ export default function AuthPage({ onLoginSuccess }) {
 
       // Save logged in user details to localStorage
       localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.user && data.user.email) {
+        localStorage.setItem('userEmail', data.user.email);
+      }
 
       // Callback to parent component to transition into Dashboard
       if (onLoginSuccess) {

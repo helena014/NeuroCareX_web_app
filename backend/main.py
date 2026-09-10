@@ -1,4 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect, Depends
+import os
+from fastapi import FastAPI, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect, Depends, Form
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -25,6 +27,12 @@ from routes.auth_routes import router as auth_router
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="NeuroCareX AI Backend")
+
+# ==================== MOUNT STATIC FILES FOR MRI & UPLOADS ====================
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+# =============================================================================
 
 # Enable CORS for React frontend
 app.add_middleware(
@@ -60,12 +68,16 @@ def home():
 # ==================== AI PREDICTION ENDPOINTS ====================
 
 @app.post("/api/predict")
-async def predict_mri(file: UploadFile = File(...)):
+async def predict_mri(
+    file: UploadFile = File(...),
+    patient_email: Optional[str] = Form("guest@neurocarex.com"),
+    db: Session = Depends(get_db)
+):
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Uploaded file must be an image.")
 
     try:
-        return await predict_alzheimer_mri(file)
+        return await predict_alzheimer_mri(file, db=db, patient_email=patient_email)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
 
@@ -77,7 +89,11 @@ async def predict_risk(data: dict):
         raise HTTPException(status_code=500, detail=f"Risk prediction error: {str(e)}")
 
 @app.post("/api/predict-speech")
-async def predict_speech(file: UploadFile = File(...)):
+async def predict_speech(
+    file: UploadFile = File(...),
+    patient_email: Optional[str] = Form("guest@neurocarex.com"),
+    db: Session = Depends(get_db)
+):
     # Validate supported audio formats
     valid_extensions = ('.wav', '.mp3', '.m4a', '.ogg', '.webm')
     if not file.filename.lower().endswith(valid_extensions):
@@ -88,7 +104,7 @@ async def predict_speech(file: UploadFile = File(...)):
     
     try:
         audio_bytes = await file.read()
-        return predict_speech_biomarker(audio_bytes, file.filename)
+        return predict_speech_biomarker(audio_bytes, file.filename, db=db, patient_email=patient_email)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Speech analysis error: {str(e)}")
 

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 
-const SpeechDetectionPage = () => {
+const SpeechDetectionPage = ({ user }) => {
     const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'record'
     const [file, setFile] = useState(null);
     const [result, setResult] = useState(null);
@@ -14,6 +14,25 @@ const SpeechDetectionPage = () => {
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const timerRef = useRef(null);
+
+    const getLoggedInUserEmail = () => {
+        if (user && user.email) return user.email;
+
+        try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                const parsed = JSON.parse(storedUser);
+                if (parsed && parsed.email) return parsed.email;
+            }
+        } catch (e) {
+            console.error('Error parsing user from localStorage:', e);
+        }
+
+        const directEmail = localStorage.getItem('userEmail') || localStorage.getItem('email');
+        if (directEmail) return directEmail;
+
+        return 'guest@neurocarex.com';
+    };
 
     // Reset / Clear state for choosing a new audio
     const handleClearAudio = () => {
@@ -89,8 +108,11 @@ const SpeechDetectionPage = () => {
         setIsLoading(true);
         setResult(null);
 
+        const userEmail = getLoggedInUserEmail();
+
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('patient_email', userEmail);
 
         try {
             const response = await fetch('http://localhost:8000/api/predict-speech', {

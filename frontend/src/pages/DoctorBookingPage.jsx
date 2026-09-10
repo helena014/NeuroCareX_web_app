@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const DoctorBookingPage = () => {
+const DoctorBookingPage = ({ user }) => {
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState('');
@@ -13,6 +13,26 @@ const DoctorBookingPage = () => {
   const [loading, setLoading] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Auto populate logged in patient details
+  useEffect(() => {
+    let uName = user?.name;
+    let uEmail = user?.email;
+
+    if (!uEmail) {
+      try {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          uName = uName || parsed?.name;
+          uEmail = uEmail || parsed?.email;
+        }
+      } catch (e) {}
+    }
+
+    if (uName) setPatientName(uName);
+    if (uEmail) setPatientEmail(uEmail);
+  }, [user]);
 
   // Fetch doctor list from PostgreSQL on component load
   useEffect(() => {
