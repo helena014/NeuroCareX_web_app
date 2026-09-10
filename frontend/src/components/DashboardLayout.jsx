@@ -1,14 +1,127 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DashboardOverviewPage from '../pages/DashboardOverviewPage';
 import MriDetectionPage from '../pages/MriDetectionPage';
 import ClinicalRiskPage from '../pages/ClinicalRiskPage';
 import SpeechDetectionPage from '../pages/SpeechDetectionPage';
 import EmotionDetectionPage from '../pages/EmotionDetectionPage'; 
 import DoctorBookingPage from '../pages/DoctorBookingPage';
+import ReminderPage from '../pages/ReminderPage';
+import DueReminderModal from './DueReminderModal';
 
-// 1. Accept 'user' and 'onLogout' as props here
 const DashboardLayout = ({ user, onLogout }) => {
     const [activeFeature, setActiveFeature] = useState('Dashboard');
+    const [dueReminder, setDueReminder] = useState(null);
+    const alertedIdsRef = useRef(new Set());
+
+    const getUserEmail = () => {
+        if (user && user.email) return user.email;
+        try {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed && parsed.email) return parsed.email;
+            }
+        } catch (e) {}
+        return localStorage.getItem('userEmail') || 'guest@neurocarex.com';
+    };
+
+    const patientEmail = getUserEmail();
+
+    // Global user interaction listener to unpause speech synthesis engine
+    useEffect(() => {
+        const unlockAudio = () => {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.resume();
+            }
+        };
+        window.addEventListener('click', unlockAudio);
+        window.addEventListener('keydown', unlockAudio);
+        return () => {
+            window.removeEventListener('click', unlockAudio);
+            window.removeEventListener('keydown', unlockAudio);
+        };
+    }, []);
+
+    // Global background interval checking for due reminders
+    useEffect(() => {
+        const checkReminders = async () => {
+            if (dueReminder) return; // If alert modal is currently open, don't trigger another one
+
+            try {
+                const res = await fetch(`http://localhost:8000/api/reminders/${encodeURIComponent(patientEmail)}`);
+                if (!res.ok) return;
+                const list = await res.json();
+
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const todayStr = `${year}-${month}-${day}`;
+
+                const currentHours = String(now.getHours()).padStart(2, '0');
+                const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+                const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+                const due = list.find((rem) => {
+                    if (rem.status !== 'pending') return false;
+                    if (alertedIdsRef.current.has(rem.id)) return false;
+
+                    const remTime = rem.reminder_time; // "HH:MM"
+                    if (!remTime) return false;
+
+                    // Date check: if specific date is set and not today, skip
+                    if (rem.reminder_date && rem.reminder_date !== todayStr) {
+                        return false;
+                    }
+
+                    // Format remTime HH:MM
+                    const parts = remTime.split(':');
+                    const paddedRemTime = `${String(parts[0]).padStart(2, '0')}:${String(parts[1]).padStart(2, '0')}`;
+
+                    return paddedRemTime <= currentTimeStr;
+                });
+
+                if (due) {
+                    alertedIdsRef.current.add(due.id);
+                    setDueReminder(due);
+                }
+            } catch (err) {
+                console.error('Error checking due reminders:', err);
+            }
+        };
+
+        checkReminders();
+        const interval = setInterval(checkReminders, 5000); // Poll every 5 seconds
+        return () => clearInterval(interval);
+    }, [patientEmail, dueReminder]);
+
+    const handleMarkTaken = async (id) => {
+        try {
+            await fetch(`http://localhost:8000/api/reminders/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'taken' })
+            });
+        } catch (err) {
+            console.error('Error marking reminder taken:', err);
+        } finally {
+            setDueReminder(null);
+        }
+    };
+
+    const handleTimeoutMissed = async (id) => {
+        try {
+            await fetch(`http://localhost:8000/api/reminders/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'missed' })
+            });
+        } catch (err) {
+            console.error('Error marking reminder missed:', err);
+        } finally {
+            setDueReminder(null);
+        }
+    };
 
     const featureLinks = [
         { name: 'Dashboard', icon: '📊' },
@@ -36,6 +149,8 @@ const DashboardLayout = ({ user, onLogout }) => {
                 return <SpeechDetectionPage user={user} />;
             case 'Patient Emotion':
                 return <EmotionDetectionPage />;
+            case 'Reminder':
+                return <ReminderPage user={user} />;
             case 'Doctor Appointment Booking':
                 return <DoctorBookingPage user={user} />;
             default:
@@ -48,9 +163,18 @@ const DashboardLayout = ({ user, onLogout }) => {
     };
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+        <div className="flex h-screen bg-gray-50 overflow-hidden font-sans relative">
+            {/* REAL-TIME DUE REMINDER POPUP MODAL */}
+            {dueReminder && (
+                <DueReminderModal
+                    reminder={dueReminder}
+                    onMarkTaken={handleMarkTaken}
+                    onTimeoutMissed={handleTimeoutMissed}
+                />
+            )}
+
             {/* LEFT SIDEBAR */}
-            <aside className="w-64 bg-slate-900 text-gray-100 flex flex-col p-6 shadow-xl shrink-0">
+            <aside className="w-64 bg-slate-900 text-gray-100 flex flex-col p-6 shadow-xl shrink-0 z-20">
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold text-white tracking-wide">NeuroCareX</h1>
                     <p className="text-xs text-slate-400 mt-1">Alzheimer's Support System</p>
@@ -85,17 +209,15 @@ const DashboardLayout = ({ user, onLogout }) => {
             </aside>
 
             {/* RIGHT MAIN CONTENT AREA */}
-            <main className="flex-1 flex flex-col overflow-y-auto">
-                <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
+            <main className="flex-1 flex flex-col overflow-y-auto z-10">
+                <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-20">
                     <h2 className="text-xl font-bold text-slate-800">{activeFeature}</h2>
                     
-                    {/* 2. Added User Info & Logout Button Here */}
                     <div className="flex items-center gap-4">
                         <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200 hidden sm:inline-block">
                             System Active
                         </span>
 
-                        {/* Display Logged-in User Name & Role */}
                         {user && (
                             <div className="text-right border-l pl-4 border-gray-200">
                                 <p className="text-xs font-semibold text-slate-800">{user.name}</p>
@@ -103,7 +225,6 @@ const DashboardLayout = ({ user, onLogout }) => {
                             </div>
                         )}
 
-                        {/* Logout Button */}
                         <button
                             onClick={onLogout}
                             className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg transition-all"
@@ -113,7 +234,7 @@ const DashboardLayout = ({ user, onLogout }) => {
                     </div>
                 </header>
 
-                <div className="p-8 flex-1">
+                <div className={`p-8 flex-1 transition-all duration-300 ${dueReminder ? 'blur-md pointer-events-none' : ''}`}>
                     {renderContent()}
                 </div>
             </main>

@@ -19,6 +19,13 @@ from services.appointment_service import (
     save_appointment, 
     fetch_patient_appointments
 )
+from services.reminder_service import (
+    create_reminder,
+    fetch_patient_reminders,
+    update_reminder,
+    update_reminder_status,
+    delete_reminder
+)
 
 # 1.Import your new auth routes
 from routes.auth_routes import router as auth_router
@@ -56,6 +63,26 @@ class AppointmentCreateSchema(BaseModel):
     slot: str          # e.g., "09:00 AM"
     reason: Optional[str] = ""
     attach_ai_history: bool = True
+
+
+class ReminderCreateSchema(BaseModel):
+    patient_email: Optional[str] = "guest@neurocarex.com"
+    title: str
+    reminder_date: Optional[str] = None
+    reminder_time: str
+    frequency: Optional[str] = "Daily"
+    notes: Optional[str] = ""
+
+class ReminderUpdateSchema(BaseModel):
+    title: Optional[str] = None
+    reminder_date: Optional[str] = None
+    reminder_time: Optional[str] = None
+    frequency: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+
+class ReminderStatusSchema(BaseModel):
+    status: str
 
 
 # ==================== GENERAL ROUTES ====================
@@ -190,3 +217,62 @@ def get_appointments_by_patient(email: str, db: Session = Depends(get_db)):
             "status": b.status
         } for b in bookings
     ]
+
+
+# ==================== PATIENT REMINDER ENDPOINTS ====================
+
+def serialize_reminder(rem):
+    return {
+        "id": rem.id,
+        "patient_email": rem.patient_email,
+        "title": rem.title,
+        "reminder_date": str(rem.reminder_date) if rem.reminder_date else None,
+        "reminder_time": str(rem.reminder_time)[:5] if rem.reminder_time else "00:00",
+        "frequency": rem.frequency,
+        "notes": rem.notes,
+        "status": rem.status,
+        "is_active": rem.is_active,
+        "created_at": rem.created_at.isoformat() if rem.created_at else None
+    }
+
+@app.post("/api/reminders")
+def add_reminder(payload: ReminderCreateSchema, db: Session = Depends(get_db)):
+    """Create a new patient reminder in PostgreSQL."""
+    try:
+        reminder = create_reminder(db, payload.dict())
+        return {
+            "status": "success",
+            "reminder": serialize_reminder(reminder)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create reminder: {str(e)}")
+
+@app.get("/api/reminders/{patient_email}")
+def get_reminders(patient_email: str, db: Session = Depends(get_db)):
+    """Fetch all active reminders for a patient."""
+    reminders = fetch_patient_reminders(db, patient_email)
+    return [serialize_reminder(r) for r in reminders]
+
+@app.put("/api/reminders/{reminder_id}")
+def edit_reminder(reminder_id: int, payload: ReminderUpdateSchema, db: Session = Depends(get_db)):
+    """Update reminder details."""
+    updated = update_reminder(db, reminder_id, payload.dict(exclude_unset=True))
+    if not updated:
+        raise HTTPException(status_code=404, detail="Reminder not found.")
+    return {"status": "success", "reminder": serialize_reminder(updated)}
+
+@app.patch("/api/reminders/{reminder_id}/status")
+def patch_reminder_status(reminder_id: int, payload: ReminderStatusSchema, db: Session = Depends(get_db)):
+    """Update reminder status to 'taken' or 'missed'."""
+    updated = update_reminder_status(db, reminder_id, payload.status)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Reminder not found.")
+    return {"status": "success", "reminder": serialize_reminder(updated)}
+
+@app.delete("/api/reminders/{reminder_id}")
+def remove_reminder(reminder_id: int, db: Session = Depends(get_db)):
+    """Soft delete/Deactivate a reminder."""
+    success = delete_reminder(db, reminder_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Reminder not found.")
+    return {"status": "success", "message": "Reminder deleted successfully."}
