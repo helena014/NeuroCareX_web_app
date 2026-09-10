@@ -18,6 +18,9 @@ from services.appointment_service import (
     fetch_patient_appointments
 )
 
+# 1.Import your new auth routes
+from routes.auth_routes import router as auth_router
+
 # Initialize database tables automatically if they don't exist
 Base.metadata.create_all(bind=engine)
 
@@ -31,6 +34,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include Auth API routes
+app.include_router(auth_router)
 
 # ==================== PYDANTIC SCHEMAS ====================
 

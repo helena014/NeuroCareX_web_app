@@ -6,7 +6,8 @@ import SpeechDetectionPage from '../pages/SpeechDetectionPage';
 import EmotionDetectionPage from '../pages/EmotionDetectionPage'; 
 import DoctorBookingPage from '../pages/DoctorBookingPage';
 
-const DashboardLayout = () => {
+// 1. Accept 'user' and 'onLogout' as props here
+const DashboardLayout = ({ user, onLogout }) => {
     const [activeFeature, setActiveFeature] = useState('Dashboard');
 
     const featureLinks = [
@@ -24,27 +25,27 @@ const DashboardLayout = () => {
     ];
 
     const renderContent = () => {
-    switch (activeFeature) {
-        case 'Dashboard':
-            return <DashboardOverviewPage setActiveFeature={setActiveFeature} />;
-        case 'MRI Scan Detection':
-            return <MriDetectionPage />;
-        case 'Clinical Risk Assessment':
-            return <ClinicalRiskPage />;
-        case 'Speech Detection': 
-            return <SpeechDetectionPage />;
-        case 'Patient Emotion':
-            return <EmotionDetectionPage />;
-        case 'Doctor Appointment Booking': // Added for PostgreSQL Doctor Booking
-            return <DoctorBookingPage />;
-        default:
-            return (
-                <div className="text-gray-500 p-8 text-lg">
-                    Feature <strong>{activeFeature}</strong> is under development.
-                </div>
-            );
-    }
-};
+        switch (activeFeature) {
+            case 'Dashboard':
+                return <DashboardOverviewPage setActiveFeature={setActiveFeature} />;
+            case 'MRI Scan Detection':
+                return <MriDetectionPage />;
+            case 'Clinical Risk Assessment':
+                return <ClinicalRiskPage />;
+            case 'Speech Detection': 
+                return <SpeechDetectionPage />;
+            case 'Patient Emotion':
+                return <EmotionDetectionPage />;
+            case 'Doctor Appointment Booking':
+                return <DoctorBookingPage />;
+            default:
+                return (
+                    <div className="text-gray-500 p-8 text-lg">
+                        Feature <strong>{activeFeature}</strong> is under development.
+                    </div>
+                );
+        }
+    };
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
@@ -87,9 +88,29 @@ const DashboardLayout = () => {
             <main className="flex-1 flex flex-col overflow-y-auto">
                 <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
                     <h2 className="text-xl font-bold text-slate-800">{activeFeature}</h2>
-                    <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200">
-                        System Active
-                    </span>
+                    
+                    {/* 2. Added User Info & Logout Button Here */}
+                    <div className="flex items-center gap-4">
+                        <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200 hidden sm:inline-block">
+                            System Active
+                        </span>
+
+                        {/* Display Logged-in User Name & Role */}
+                        {user && (
+                            <div className="text-right border-l pl-4 border-gray-200">
+                                <p className="text-xs font-semibold text-slate-800">{user.name}</p>
+                                <p className="text-[10px] text-slate-500 capitalize">{user.role}</p>
+                            </div>
+                        )}
+
+                        {/* Logout Button */}
+                        <button
+                            onClick={onLogout}
+                            className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg transition-all"
+                        >
+                            Logout
+                        </button>
+                    </div>
                 </header>
 
                 <div className="p-8 flex-1">
