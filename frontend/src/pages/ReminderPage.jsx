@@ -30,8 +30,8 @@ const ReminderPage = ({ user }) => {
     const patientEmail = getUserEmail();
 
     // Fetch reminders from backend
-    const fetchReminders = async () => {
-        setIsLoading(true);
+    const fetchReminders = async (showLoading = false) => {
+        if (showLoading) setIsLoading(true);
         try {
             const res = await fetch(`http://localhost:8000/api/reminders/${encodeURIComponent(patientEmail)}`);
             if (!res.ok) throw new Error('Failed to fetch reminders');
@@ -40,12 +40,21 @@ const ReminderPage = ({ user }) => {
         } catch (err) {
             console.error('Error fetching reminders:', err);
         } finally {
-            setIsLoading(false);
+            if (showLoading) setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchReminders();
+        fetchReminders(true);
+        const interval = setInterval(() => fetchReminders(false), 3000);
+
+        const handleStatusChanged = () => fetchReminders(false);
+        window.addEventListener('reminder-status-changed', handleStatusChanged);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('reminder-status-changed', handleStatusChanged);
+        };
     }, [patientEmail]);
 
     const openAddModal = () => {
@@ -87,7 +96,8 @@ const ReminderPage = ({ user }) => {
             reminder_date: reminderDate || null,
             reminder_time: reminderTime,
             frequency: frequency,
-            notes: notes.trim()
+            notes: notes.trim(),
+            status: 'pending'
         };
 
         try {

@@ -64,8 +64,7 @@ const DashboardLayout = ({ user, onLogout }) => {
 
                 const due = list.find((rem) => {
                     if (rem.status !== 'pending') return false;
-                    if (alertedIdsRef.current.has(rem.id)) return false;
-
+                    
                     const remTime = rem.reminder_time; // "HH:MM"
                     if (!remTime) return false;
 
@@ -78,11 +77,18 @@ const DashboardLayout = ({ user, onLogout }) => {
                     const parts = remTime.split(':');
                     const paddedRemTime = `${String(parts[0]).padStart(2, '0')}:${String(parts[1]).padStart(2, '0')}`;
 
+                    // Composite key includes time so editing time allows alert to fire again at new time
+                    const reminderKey = `${rem.id}_${paddedRemTime}_${rem.reminder_date || 'daily'}_${todayStr}`;
+                    if (alertedIdsRef.current.has(reminderKey)) return false;
+
                     return paddedRemTime <= currentTimeStr;
                 });
 
                 if (due) {
-                    alertedIdsRef.current.add(due.id);
+                    const parts = due.reminder_time.split(':');
+                    const paddedRemTime = `${String(parts[0]).padStart(2, '0')}:${String(parts[1]).padStart(2, '0')}`;
+                    const dueKey = `${due.id}_${paddedRemTime}_${due.reminder_date || 'daily'}_${todayStr}`;
+                    alertedIdsRef.current.add(dueKey);
                     setDueReminder(due);
                 }
             } catch (err) {
@@ -91,7 +97,7 @@ const DashboardLayout = ({ user, onLogout }) => {
         };
 
         checkReminders();
-        const interval = setInterval(checkReminders, 5000); // Poll every 5 seconds
+        const interval = setInterval(checkReminders, 3000); // Poll every 3 seconds for fast reaction
         return () => clearInterval(interval);
     }, [patientEmail, dueReminder]);
 
@@ -102,6 +108,7 @@ const DashboardLayout = ({ user, onLogout }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'taken' })
             });
+            window.dispatchEvent(new CustomEvent('reminder-status-changed', { detail: { id, status: 'taken' } }));
         } catch (err) {
             console.error('Error marking reminder taken:', err);
         } finally {
@@ -116,6 +123,7 @@ const DashboardLayout = ({ user, onLogout }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'missed' })
             });
+            window.dispatchEvent(new CustomEvent('reminder-status-changed', { detail: { id, status: 'missed' } }));
         } catch (err) {
             console.error('Error marking reminder missed:', err);
         } finally {
