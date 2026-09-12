@@ -30,6 +30,9 @@ from services.reminder_service import (
 # 1.Import your new auth routes
 from routes.auth_routes import router as auth_router
 
+# 2. IMPORT YOUR DOCTOR ROUTES HERE
+from routes.doctor_router import router as doctor_router
+
 # Initialize database tables automatically if they don't exist
 Base.metadata.create_all(bind=engine)
 
@@ -52,6 +55,9 @@ app.add_middleware(
 
 # Include Auth API routes
 app.include_router(auth_router)
+
+# INCLUDE DOCTOR API ROUTES HERE
+app.include_router(doctor_router)
 
 # ==================== PYDANTIC SCHEMAS ====================
 

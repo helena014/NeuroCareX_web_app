@@ -1,110 +1,43 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 
-export default function DoctorLayout({ user, onLogout }) {
-  const [activeFeature, setActiveFeature] = useState('Dashboard');
+const DoctorLayout = ({ onLogout }) => {
+    const navigate = useNavigate();
 
-  const featureLinks = [
-    { name: 'Dashboard', icon: '📊' }
-  ];
+    const handleLogoutClick = () => {
+        if (onLogout) {
+            onLogout();
+        } else {
+            localStorage.clear();
+        }
+        navigate('/');
+    };
 
-  const renderContent = () => {
     return (
-      <div className="space-y-6">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-white shadow-xl">
-          <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full uppercase tracking-wider">
-            Doctor Portal
-          </span>
-          <h1 className="text-3xl font-extrabold mt-4">Welcome back, {user?.name || 'Doctor'}</h1>
-          <p className="text-slate-400 text-sm mt-2 max-w-xl">
-            Review booked patient appointments, analyze AI diagnostic results, and manage clinical assessments.
-          </p>
-        </div>
+        <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+            <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-4 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-extrabold text-xl shadow-md">👨‍⚕️</div>
+                    <div>
+                        <h1 className="text-lg font-bold text-slate-800">NeuroCareX Doctor Portal</h1>
+                        <p className="text-xs text-slate-400">Clinical Dashboard & Patient Insights</p>
+                    </div>
+                </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500 uppercase">Today's Appointments</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">3 Booked</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500 uppercase">MRI Reviews</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">5 Completed</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500 uppercase">Clinical Database</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">PostgreSQL Live</p>
-          </div>
+                <nav className="flex items-center gap-6">
+                    <Link to="/doctor/dashboard" className="text-slate-600 hover:text-indigo-600 font-semibold text-sm transition">Appointments</Link>
+                    <Link to="/doctor/profile" className="text-slate-600 hover:text-indigo-600 font-semibold text-sm transition">Profile Management</Link>
+                    <button onClick={handleLogoutClick} className="px-4 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-sm rounded-xl transition">
+                        Logout
+                    </button>
+                </nav>
+            </header>
+
+            <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+                <Outlet />
+            </main>
         </div>
-      </div>
     );
-  };
+};
 
-  return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-      {/* LEFT SIDEBAR */}
-      <aside className="w-64 bg-slate-900 text-gray-100 flex flex-col p-6 shadow-xl shrink-0">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white tracking-wide">NeuroCareX</h1>
-          <p className="text-xs text-emerald-400 font-semibold mt-1">Doctor Portal</p>
-        </div>
-
-        <nav className="flex-grow space-y-1 overflow-y-auto no-scrollbar">
-          {featureLinks.map((feature) => (
-            <button
-              key={feature.name}
-              onClick={() => setActiveFeature(feature.name)}
-              className={`flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                activeFeature === feature.name
-                  ? 'bg-emerald-600 text-white shadow-md font-semibold'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <span className="mr-3 text-lg">{feature.icon}</span>
-              <span className="truncate">{feature.name}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="border-t border-slate-800 pt-4 mt-auto flex items-center space-x-3 text-xs text-slate-400">
-          <div className="w-8 h-8 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-400">
-            DR
-          </div>
-          <div>
-            <p className="font-semibold text-slate-200">Clinical Portal</p>
-            <p className="text-slate-500">NeuroCareX</p>
-          </div>
-        </div>
-      </aside>
-
-      {/* RIGHT MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col overflow-y-auto">
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
-          <h2 className="text-xl font-bold text-slate-800">{activeFeature}</h2>
-          
-          <div className="flex items-center gap-4">
-            <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200 hidden sm:inline-block">
-              Clinical Active
-            </span>
-
-            {user && (
-              <div className="text-right border-l pl-4 border-gray-200">
-                <p className="text-xs font-semibold text-slate-800">{user.name}</p>
-                <p className="text-[10px] text-emerald-600 font-medium capitalize">{user.role}</p>
-              </div>
-            )}
-
-            <button
-              onClick={onLogout}
-              className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg transition-all"
-            >
-              Logout
-            </button>
-          </div>
-        </header>
-
-        <div className="p-8 flex-1">
-          {renderContent()}
-        </div>
-      </main>
-    </div>
-  );
-}
+export default DoctorLayout;

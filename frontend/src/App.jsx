@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Authentication Page
 import AuthPage from './pages/AuthPage';
 
-// Layout Components (All placed in src/components/)
+// Doctor Pages & Layout
+import DoctorLayout from './components/DoctorLayout';
+import DoctorDashboard from './pages/doctor/DoctorDashboard';
+import DoctorProfile from './pages/doctor/DoctorProfile';
+
+// Layout Components
 import DashboardLayout from './components/DashboardLayout'; // Patient Layout
 import CaregiverLayout from './components/CaregiverLayout'; // Caregiver Layout
-import DoctorLayout from './components/DoctorLayout';       // Doctor Layout
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -26,60 +31,62 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('doctorId');
     setUser(null);
   };
 
-  // 1. Show Auth Page if no user is logged in
-  if (!user) {
-    return <AuthPage onLoginSuccess={handleLoginSuccess} />;
-  }
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* If not logged in, show AuthPage */}
+        {!user ? (
+          <Route path="*" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
+        ) : (
+          <>
+            {/* PATIENT ROLE */}
+            {user.role === 'patient' && (
+              <Route path="*" element={<DashboardLayout user={user} onLogout={handleLogout} />} />
+            )}
 
-  // 2. Render Patient Portal (Your existing Dashboard Layout)
-  if (user.role === 'patient') {
-    return <DashboardLayout user={user} onLogout={handleLogout} />;
-  }
+            {/* CAREGIVER ROLE */}
+            {user.role === 'caregiver' && (
+              <Route
+                path="*"
+                element={
+                  <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+                    <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl max-w-lg text-center shadow-xl">
+                      <span className="text-4xl mb-4 block">🤝</span>
+                      <h1 className="text-2xl font-bold mb-2">Caregiver Dashboard</h1>
+                      <p className="text-slate-400 text-sm mb-6">
+                        Welcome, <strong className="text-white">{user.name}</strong>! The Caregiver monitoring suite is currently under development.
+                      </p>
+                      <button
+                        onClick={handleLogout}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg text-sm transition"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                }
+              />
+            )}
 
-  // 3. Render Caregiver Dashboard (Placeholder until you build it)
-  if (user.role === 'caregiver') {
-    return (
-      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
-        <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl max-w-lg text-center shadow-xl">
-          <span className="text-4xl mb-4 block">🤝</span>
-          <h1 className="text-2xl font-bold mb-2">Caregiver Dashboard</h1>
-          <p className="text-slate-400 text-sm mb-6">
-            Welcome, <strong className="text-white">{user.name}</strong>! The Caregiver monitoring suite is currently under development.
-          </p>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg text-sm transition"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // 4. Render Doctor Dashboard (Placeholder until you build it)
-  if (user.role === 'doctor') {
-    return (
-      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
-        <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl max-w-lg text-center shadow-xl">
-          <span className="text-4xl mb-4 block">👨‍⚕️</span>
-          <h1 className="text-2xl font-bold mb-2">Doctor Portal</h1>
-          <p className="text-slate-400 text-sm mb-6">
-            Welcome, <strong className="text-white">{user.name}</strong>! The Doctor clinical management portal is currently under development.
-          </p>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg text-sm transition"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
+            {/* DOCTOR ROLE (Using react-router-dom routes) */}
+            {user.role === 'doctor' && (
+              <>
+                <Route path="/doctor" element={<DoctorLayout onLogout={handleLogout} />}>
+                  <Route path="dashboard" element={<DoctorDashboard />} />
+                  <Route path="profile" element={<DoctorProfile />} />
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                </Route>
+                {/* Fallback to /doctor/dashboard for any other route */}
+                <Route path="*" element={<Navigate to="/doctor/dashboard" replace />} />
+              </>
+            )}
+          </>
+        )}
+      </Routes>
+    </BrowserRouter>
+  );
 }
