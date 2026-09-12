@@ -1,110 +1,170 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import CaregiverDashboard from '../pages/caregiver/CaregiverDashboard';
+import CaregiverReminders from '../pages/caregiver/CaregiverReminders';
+import CaregiverAppointments from '../pages/caregiver/CaregiverAppointments';
 
-export default function CaregiverLayout({ user, onLogout }) {
-  const [activeFeature, setActiveFeature] = useState('Dashboard');
+const CaregiverLayout = ({ onLogout }) => {
+  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [patients, setPatients] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState('');
+  const [newPatientEmail, setNewPatientEmail] = useState('');
+  
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const caregiverEmail = storedUser.email || '';
 
-  const featureLinks = [
-    { name: 'Dashboard', icon: '📊' }
-  ];
-
-  const renderContent = () => {
-    return (
-      <div className="space-y-6">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-white shadow-xl">
-          <span className="text-xs font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full uppercase tracking-wider">
-            Caregiver Portal
-          </span>
-          <h1 className="text-3xl font-extrabold mt-4">Welcome back, {user?.name || 'Caregiver'}</h1>
-          <p className="text-slate-400 text-sm mt-2 max-w-xl">
-            Monitor patient progress, view diagnostic history logs, and track activity reminders.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500 uppercase">Assigned Patients</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">1 Active</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500 uppercase">Recent Diagnostics</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">2 Pending Review</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500 uppercase">Alert Status</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">Normal</p>
-          </div>
-        </div>
-      </div>
-    );
+  const loadPatients = async () => {
+    if (!caregiverEmail) return;
+    try {
+      const res = await fetch(`http://localhost:8000/api/caregiver/linked-patients?caregiver_email=${encodeURIComponent(caregiverEmail)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPatients(data);
+        if (data.length > 0 && !selectedPatient) {
+          setSelectedPatient(data[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching linked patients:", err);
+    }
   };
 
+  useEffect(() => {
+    loadPatients();
+  }, [caregiverEmail]);
+
+  const handleLinkPatient = async (e) => {
+    e.preventDefault();
+    if (!newPatientEmail.trim()) return;
+
+    try {
+      const res = await fetch('http://localhost:8000/api/caregiver/link-patient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caregiver_email: caregiverEmail,
+          patient_email: newPatientEmail.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        const addedEmail = newPatientEmail.trim();
+        setNewPatientEmail('');
+        await loadPatients();
+        setSelectedPatient(addedEmail);
+      }
+    } catch (err) {
+      console.error("Failed to link patient:", err);
+    }
+  };
+
+  const navItems = [
+    { name: 'Dashboard', icon: '📊' },
+    { name: 'Reminder', icon: '⏰' },
+    { name: 'Doctor Appointment', icon: '📅' },
+  ];
+
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-      {/* LEFT SIDEBAR */}
-      <aside className="w-64 bg-slate-900 text-gray-100 flex flex-col p-6 shadow-xl shrink-0">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white tracking-wide">NeuroCareX</h1>
-          <p className="text-xs text-blue-400 font-semibold mt-1">Caregiver Portal</p>
+    <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 shadow-xl z-20">
+        <div className="space-y-6">
+          <div className="px-3 py-2">
+            <h1 className="text-xl font-black text-white tracking-wider flex items-center gap-2">
+              <span className="text-blue-500">NeuroCareX</span>
+            </h1>
+            <p className="text-[10px] text-slate-400 font-medium">Caregiver Portal</p>
+          </div>
+
+          <nav className="space-y-1">
+            {navItems.map((item) => (
+              <button
+                key={item.name}
+                onClick={() => setActiveTab(item.name)}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
+                  activeTab === item.name
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <span className="text-base">{item.icon}</span>
+                <span>{item.name}</span>
+              </button>
+            ))}
+          </nav>
         </div>
 
-        <nav className="flex-grow space-y-1 overflow-y-auto no-scrollbar">
-          {featureLinks.map((feature) => (
-            <button
-              key={feature.name}
-              onClick={() => setActiveFeature(feature.name)}
-              className={`flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                activeFeature === feature.name
-                  ? 'bg-blue-600 text-white shadow-md font-semibold'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <span className="mr-3 text-lg">{feature.icon}</span>
-              <span className="truncate">{feature.name}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="border-t border-slate-800 pt-4 mt-auto flex items-center space-x-3 text-xs text-slate-400">
-          <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-blue-400">
-            CG
-          </div>
-          <div>
-            <p className="font-semibold text-slate-200">Caregiver Access</p>
-            <p className="text-slate-500">NeuroCareX</p>
+        <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/50 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-extrabold flex items-center justify-center text-xs">CG</div>
+          <div className="overflow-hidden">
+            <p className="text-xs font-bold text-slate-200 truncate">{storedUser.name || 'Caregiver User'}</p>
+            <p className="text-[10px] text-slate-400 truncate">{caregiverEmail}</p>
           </div>
         </div>
       </aside>
 
-      {/* RIGHT MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col overflow-y-auto">
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
-          <h2 className="text-xl font-bold text-slate-800">{activeFeature}</h2>
-          
-          <div className="flex items-center gap-4">
-            <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200 hidden sm:inline-block">
-              Caregiver Active
-            </span>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header with Dynamic Patient Linking & Switcher */}
+        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-sm z-10 gap-4">
+          <h2 className="text-lg font-bold text-slate-800">{activeTab}</h2>
 
-            {user && (
-              <div className="text-right border-l pl-4 border-gray-200">
-                <p className="text-xs font-semibold text-slate-800">{user.name}</p>
-                <p className="text-[10px] text-blue-600 font-medium capitalize">{user.role}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            {/* Link New Patient Form */}
+            <form onSubmit={handleLinkPatient} className="flex items-center gap-2">
+              <input
+                type="email"
+                placeholder="Connect patient email..."
+                value={newPatientEmail}
+                onChange={(e) => setNewPatientEmail(e.target.value)}
+                className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition"
+              >
+                + Connect
+              </button>
+            </form>
+
+            {/* Select Active Patient Dropdown */}
+            {patients.length > 0 && (
+              <select
+                value={selectedPatient}
+                onChange={(e) => setSelectedPatient(e.target.value)}
+                className="px-3 py-1.5 bg-slate-100 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {patients.map((pat) => (
+                  <option key={pat} value={pat}>
+                    👤 Patient: {pat}
+                  </option>
+                ))}
+              </select>
             )}
 
             <button
-              onClick={onLogout}
-              className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg transition-all"
+              onClick={onLogout || (() => { localStorage.clear(); window.location.href = '/'; })}
+              className="px-3 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition"
             >
               Logout
             </button>
           </div>
         </header>
 
-        <div className="p-8 flex-1">
-          {renderContent()}
-        </div>
-      </main>
+        {/* View Pages */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {activeTab === 'Dashboard' && (
+            <CaregiverDashboard selectedPatient={selectedPatient} setActiveTab={setActiveTab} />
+          )}
+          {activeTab === 'Reminder' && (
+            <CaregiverReminders selectedPatient={selectedPatient} />
+          )}
+          {activeTab === 'Doctor Appointment' && (
+            <CaregiverAppointments selectedPatient={selectedPatient} />
+          )}
+        </main>
+      </div>
     </div>
   );
-}
+};
+
+export default CaregiverLayout;

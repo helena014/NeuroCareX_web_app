@@ -52,23 +52,7 @@ export default function App() {
             {user.role === 'caregiver' && (
               <Route
                 path="*"
-                element={
-                  <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
-                    <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl max-w-lg text-center shadow-xl">
-                      <span className="text-4xl mb-4 block">🤝</span>
-                      <h1 className="text-2xl font-bold mb-2">Caregiver Dashboard</h1>
-                      <p className="text-slate-400 text-sm mb-6">
-                        Welcome, <strong className="text-white">{user.name}</strong>! The Caregiver monitoring suite is currently under development.
-                      </p>
-                      <button
-                        onClick={handleLogout}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg text-sm transition"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  </div>
-                }
+                element={<CaregiverLayout user={user} onLogout={handleLogout} />}
               />
             )}
 

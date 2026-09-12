@@ -33,6 +33,9 @@ from routes.auth_routes import router as auth_router
 # 2. IMPORT YOUR DOCTOR ROUTES HERE
 from routes.doctor_router import router as doctor_router
 
+# 2. IMPORT YOUR CAREGIVER ROUTES HERE
+from routes import caregiver_router
+
 # Initialize database tables automatically if they don't exist
 Base.metadata.create_all(bind=engine)
 
@@ -58,6 +61,9 @@ app.include_router(auth_router)
 
 # INCLUDE DOCTOR API ROUTES HERE
 app.include_router(doctor_router)
+
+# INCLUDE CAREGIVER API ROUTES HERE
+app.include_router(caregiver_router.router)
 
 # ==================== PYDANTIC SCHEMAS ====================
 
